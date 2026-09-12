@@ -18,8 +18,11 @@ export default function RentalsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const assigned = (process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur').toLowerCase();
-        const data = await api.getRentals({ locality: assigned, limit: 100 });
+        const params: any = { limit: 100 };
+        if (localitySearch) {
+          params.locality = localitySearch.toLowerCase().trim();
+        }
+        const data = await api.getRentals(params);
         setRentals(data.results || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load rental properties');
@@ -28,7 +31,7 @@ export default function RentalsPage() {
       }
     };
     fetchRentals();
-  }, []);
+  }, [localitySearch]);
 
   const filteredRentals = rentals.filter((r) => {
     if (localitySearch && !r.locality.toLowerCase().includes(localitySearch.toLowerCase().trim())) {
@@ -52,21 +55,41 @@ export default function RentalsPage() {
           Browse Verified Rental Properties
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Showing verified rentals with transparent monthly rent, deposit terms, and authentic carpet areas.
+          Showing verified rentals in {localitySearch || 'all localities'} with transparent monthly rent, deposit terms, and authentic carpet areas.
         </p>
       </div>
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-1 min-w-[200px] items-center relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3" />
-          <input
-            type="text"
-            placeholder="Filter by locality (e.g. Miyapur)..."
-            value={localitySearch}
+        <div className="flex flex-1 min-w-[200px] items-center space-x-2">
+          <label className="text-xs font-semibold text-slate-600 shrink-0">Locality:</label>
+          <select
+            value={localitySearch.toLowerCase().trim()}
             onChange={(e) => setLocalitySearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+            className="w-full text-xs sm:text-sm py-2 px-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-800"
+          >
+            <option value="">All Localities</option>
+            {[
+              'Miyapur',
+              'Banjara Hills',
+              'Gachibowli',
+              'Jubilee Hills',
+              'Kompally',
+              'Kondapur',
+              'Kukatpally',
+              'Madhapur',
+              'Manikonda',
+              'Nallagandla',
+            ].map((loc) => {
+              const val = loc.toLowerCase();
+              const isAssigned = val === 'miyapur';
+              return (
+                <option key={loc} value={val}>
+                  {loc} {isAssigned ? '★ (Assigned)' : ''}
+                </option>
+              );
+            })}
+          </select>
         </div>
 
         <div className="flex items-center space-x-2">

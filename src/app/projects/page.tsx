@@ -10,6 +10,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [localityFilter, setLocalityFilter] = useState(process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -18,8 +19,11 @@ export default function ProjectsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const assigned = (process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur').toLowerCase();
-        const data = await api.getProjects({ locality: assigned, limit: 100 });
+        const params: any = { limit: 100 };
+        if (localityFilter) {
+          params.locality = localityFilter.toLowerCase().trim();
+        }
+        const data = await api.getProjects(params);
         setProjects(data.results || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load projects');
@@ -28,7 +32,7 @@ export default function ProjectsPage() {
       }
     };
     fetchProjects();
-  }, []);
+  }, [localityFilter]);
 
   const filteredProjects = projects.filter((p) => {
     if (search) {
@@ -56,17 +60,48 @@ export default function ProjectsPage() {
           Builder Projects & Communities
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Showing verified RERA registered projects with transparent carpet area ranges and min/max pricing.
+          Showing verified RERA registered projects in {localityFilter || 'all localities'} with transparent carpet area ranges and pricing.
         </p>
       </div>
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-1 min-w-[220px] items-center relative">
+        <div className="flex items-center space-x-2 min-w-[200px]">
+          <label className="text-xs font-semibold text-slate-600 shrink-0">Locality:</label>
+          <select
+            value={localityFilter.toLowerCase().trim()}
+            onChange={(e) => setLocalityFilter(e.target.value)}
+            className="w-full text-xs sm:text-sm py-2 px-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium text-slate-800"
+          >
+            <option value="">All Localities</option>
+            {[
+              'Miyapur',
+              'Banjara Hills',
+              'Gachibowli',
+              'Jubilee Hills',
+              'Kompally',
+              'Kondapur',
+              'Kukatpally',
+              'Madhapur',
+              'Manikonda',
+              'Nallagandla',
+            ].map((loc) => {
+              const val = loc.toLowerCase();
+              const isAssigned = val === 'miyapur';
+              return (
+                <option key={loc} value={val}>
+                  {loc} {isAssigned ? '★ (Assigned)' : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex flex-1 min-w-[180px] items-center relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3" />
           <input
             type="text"
-            placeholder="Search by project name, developer, or locality (e.g. Miyapur)..."
+            placeholder="Search by project or builder name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500"

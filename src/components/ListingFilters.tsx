@@ -20,15 +20,30 @@ interface ListingFiltersProps {
   availableLocalities?: string[];
 }
 
+export const ALL_LOCALITIES = [
+  'Miyapur',
+  'Banjara Hills',
+  'Gachibowli',
+  'Jubilee Hills',
+  'Kompally',
+  'Kondapur',
+  'Kukatpally',
+  'Madhapur',
+  'Manikonda',
+  'Nallagandla',
+];
+
 export function ListingFilters({
   filters,
   onChange,
   onReset,
-  availableLocalities = [],
+  availableLocalities = ALL_LOCALITIES,
 }: ListingFiltersProps) {
   const handleChange = (key: keyof FilterState, value: any) => {
     onChange({ ...filters, [key]: value });
   };
+
+  const currentLocalityValue = (filters.locality || '').toLowerCase().trim();
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm mb-6">
@@ -50,31 +65,22 @@ export function ListingFilters({
         {/* Locality Filter */}
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Locality</label>
-          {availableLocalities.length > 0 ? (
-            <select
-              value={filters.locality}
-              onChange={(e) => handleChange('locality', e.target.value)}
-              className="w-full text-sm rounded-xl border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="">All Localities</option>
-              {availableLocalities.map((loc) => (
-                <option key={loc} value={loc.toLowerCase()}>
-                  {loc.charAt(0).toUpperCase() + loc.slice(1)}
+          <select
+            value={currentLocalityValue}
+            onChange={(e) => handleChange('locality', e.target.value)}
+            className="w-full text-sm rounded-xl border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800"
+          >
+            <option value="">All Localities</option>
+            {availableLocalities.map((loc) => {
+              const locVal = loc.toLowerCase().trim();
+              const isAssigned = locVal === 'miyapur';
+              return (
+                <option key={loc} value={locVal}>
+                  {loc} {isAssigned ? '★ (Assigned)' : ''}
                 </option>
-              ))}
-            </select>
-          ) : (
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="e.g. Miyapur"
-                value={filters.locality}
-                onChange={(e) => handleChange('locality', e.target.value)}
-                className="w-full text-sm rounded-xl border border-gray-300 py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" />
-            </div>
-          )}
+              );
+            })}
+          </select>
         </div>
 
         {/* BHK Bedrooms Filter */}
