@@ -44,8 +44,8 @@ export interface Rental {
   total_floors?: number;
   furnishing?: string;
   facing_direction?: string;
-  price: number; // monthly rent in rupees
-  deposit?: number; // security deposit in rupees
+  price: number;
+  deposit?: number;
   maintenance?: number;
   carpet_area: number;
   super_builtup_area?: number;
@@ -100,14 +100,15 @@ export interface AnalyticsSummary {
 
 export interface User {
   email: string;
-  name: string;
+  name?: string;
 }
 
 export interface AuthSession {
   token: string;
+  refresh_token?: string;
   token_type: string;
   expires_in: number;
-  expires_at: number; // epoch timestamp in ms
+  expires_at: number;
   user: User;
 }
 

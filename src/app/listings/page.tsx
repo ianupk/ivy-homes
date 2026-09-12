@@ -56,18 +56,14 @@ export default function ListingsPage() {
     fetchListings();
   }, [page, pageSize, filters.sort_by, filters.order, filters.locality]);
 
-  // Defensive client-side filtering layer:
-  // "Filters for locality, bedrooms, price range and furnishing must actually filter, whether or not the server helps you."
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
-      // Locality
       if (filters.locality) {
         const itemLoc = (item.locality || '').toLowerCase();
         const searchLoc = filters.locality.toLowerCase().trim();
         if (!itemLoc.includes(searchLoc)) return false;
       }
 
-      // BHK
       if (filters.bhk !== 'all') {
         const targetBhk = Number(filters.bhk);
         if (targetBhk === 4) {
@@ -77,19 +73,16 @@ export default function ListingsPage() {
         }
       }
 
-      // Min Price
       if (filters.min_price) {
         const minP = Number(filters.min_price);
         if (item.price < minP) return false;
       }
 
-      // Max Price
       if (filters.max_price) {
         const maxP = Number(filters.max_price);
         if (item.price > maxP) return false;
       }
 
-      // Furnishing
       if (filters.furnishing !== 'all') {
         const itemFurn = (item.furnishing || '').toLowerCase().replace(/\s+/g, '-');
         const searchFurn = filters.furnishing.toLowerCase().replace(/\s+/g, '-');
@@ -143,7 +136,7 @@ export default function ListingsPage() {
       {isLoading ? (
         <div className="py-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-          <p className="text-sm font-medium text-slate-600">Loading listings from Property API...</p>
+          <p className="text-sm font-medium text-slate-600">Loading verified properties...</p>
         </div>
       ) : error ? (
         <div className="p-6 bg-red-50 border border-red-200 rounded-2xl flex items-center space-x-3 text-red-800 text-sm">

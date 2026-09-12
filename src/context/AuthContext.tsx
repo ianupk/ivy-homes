@@ -11,7 +11,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  loginDemo: (accountNumber: 1 | 2 | 3) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,12 +22,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from localStorage
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed: AuthSession = JSON.parse(stored);
-        // Ensure session has not expired
         if (parsed.expires_at > Date.now()) {
           setSession(parsed);
         } else {
@@ -56,12 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const loginDemo = async (num: 1 | 2 | 3) => {
-    const email = `demo${num}@ivy.homes`;
-    const password = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'demo-password';
-    await login(email, password);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -71,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         logout,
-        loginDemo,
       }}
     >
       {children}

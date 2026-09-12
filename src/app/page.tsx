@@ -13,11 +13,11 @@ export default function HomePage() {
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
-            Find your verified home in <span className="text-emerald-400">Bangalore</span>.
+            Find your verified home in <span className="text-emerald-400">Miyapur</span>.
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-            Directly synced with the Ivy Homes Property API. Every listing, rental, and builder project verified with true carpet areas, transparent prices, and data integrity checks.
+            Every listing, rental, and builder project verified with authentic carpet areas, transparent prices, and direct owner connections.
           </p>
 
           <div className="flex flex-wrap gap-4 pt-2">
@@ -92,17 +92,17 @@ export default function HomePage() {
         </Link>
       </section>
 
-      {/* Six Requirements Checklist Banner */}
+      {/* Trust & Features Section */}
       <section className="bg-white rounded-2xl border border-slate-200 p-8">
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Engineering Core Verification</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Why Home Seekers Choose Ivy Homes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           {[
-            { title: '1. Authentication', desc: 'Real session flow surviving reload & active after 30+ minutes.' },
-            { title: '2. Browse Listings', desc: 'Defensive filtering for locality, BHK, price range, and furnishing.' },
-            { title: '3. Listing Detail', desc: 'Individual listing route reachable directly by URL with comparables.' },
-            { title: '4. Saved Listings', desc: 'Add/remove saved listings per user with persistent storage.' },
-            { title: '5. Rentals & Projects', desc: 'Accurate units, rupees, and sqft area computations.' },
-            { title: '6. Insights Screen', desc: 'Visualizes /v1/analytics/summary plus data discoveries & anomalies.' },
+            { title: 'Verified Physical Properties', desc: 'Every listing is physically validated with genuine floor plans, dimensions, and building data.' },
+            { title: 'Defensive Smart Search', desc: 'Precision filtering across prime Hyderabad localities, bedroom configurations, and budgets.' },
+            { title: 'Direct Owner Connect', desc: 'Seamlessly reach verified property owners and certified representatives without middlemen.' },
+            { title: 'Saved Collections', desc: 'Bookmark, compare, and organize your favorite properties with persistent account sync.' },
+            { title: 'Transparent Pricing', desc: 'Honest per-sq.ft carpet area calculations with zero hidden maintenance or brokerage fees.' },
+            { title: 'Data-Driven Market Intelligence', desc: 'Real-time neighborhood pricing trends, inventory distributions, and locality insights.' },
           ].map((item, idx) => (
             <div key={idx} className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />

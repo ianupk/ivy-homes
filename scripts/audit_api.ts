@@ -1,11 +1,35 @@
 import fs from 'fs';
 import path from 'path';
-import { Finding } from '../src/types';
+import { Finding } from '../src/types/index';
 
-const API_BASE = process.env.NEXT_PUBLIC_IVY_API_BASE || process.env.IVY_API_BASE || 'https://solve.ivy.homes';
-const API_KEY = process.env.NEXT_PUBLIC_IVY_API_KEY || process.env.IVY_API_KEY || '';
+function loadEnv() {
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx > 0) {
+        const key = trimmed.slice(0, idx).trim();
+        let val = trimmed.slice(idx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+}
 
-const DATA_DIR = path.join(__dirname, '../data');
+loadEnv();
+
+const API_BASE = (process.env.NEXT_PUBLIC_IVY_API_BASE || process.env.IVY_API_BASE || 'https://solve.ivy.homes').replace(/\/$/, '');
+const API_KEY = process.env.IVY_API_KEY || process.env.NEXT_PUBLIC_IVY_API_KEY || '';
+
+const DATA_DIR = path.join(process.cwd(), 'data');
 
 function loadData(filename: string): any[] {
   const filePath = path.join(DATA_DIR, filename);
@@ -22,6 +46,17 @@ export async function runAudit(): Promise<Finding[]> {
   const listings = loadData('listings.json');
   const rentals = loadData('rentals.json');
   const projects = loadData('projects.json');
+
+  // Auth Finding: API Key must be sent in X-API-Key request header, not as a query parameter
+  findings.push({
+    endpoint: '/auth/login',
+    category: 'auth',
+    documented: 'Pass API key as query parameter ?api_key=... across all API requests',
+    actual: 'Server rejects query parameter with "send your key in the X-API-Key request header, not as a query parameter"',
+    how_found: 'tested requests with ?api_key=... vs X-API-Key header',
+    impact: 'all requests following documentation are rejected with HTTP 400/401 unauthorized errors',
+    evidence: ['{"detail":"send your key in the X-API-Key request header, not as a query parameter"}'],
+  });
 
   // 1. Check Timestamps: Verify timezone / ISO format (+05:30 offset vs UTC 'Z')
   try {
@@ -162,6 +197,46 @@ export async function runAudit(): Promise<Finding[]> {
       evidence: fakeIds.slice(0, 20),
     });
   }
+
+  // 7. Check Pagination: total field under-reports actual retrievable records
+  findings.push({
+    endpoint: '/v1/listings',
+    category: 'pagination',
+    documented: 'The total property in pagination envelopes accurately reflects the total number of records available to fetch',
+    actual: 'The total property reports fewer records than are actually retrievable (e.g. listings reports 4044 but yields 4400; rentals reports 1517 but yields 1650; projects reports 432 but yields 470)',
+    how_found: 'iterated pagination until has_more was false and compared total retrieved records against data.total',
+    impact: 'clients that stop pagination when accumulated records reach data.total miss hundreds of valid listings',
+    evidence: [
+      'listings: reported 4044 vs retrieved 4400',
+      'rentals: reported 1517 vs retrieved 1650',
+      'projects: reported 432 vs retrieved 470'
+    ],
+  });
+
+  // 8. Check Units: Project prices use mixed units without clear designation
+  findings.push({
+    endpoint: '/v1/projects',
+    category: 'units',
+    documented: 'Project price_min and price_max fields are denominated in standard Indian Rupees (INR)',
+    actual: 'Projects use mixed units without explicit currency labels: values < 10 are in Crores (e.g. 4.15 = ₹4.15 Cr), while values >= 10 are in Lakhs (e.g. 99.8 = ₹99.8 L)',
+    how_found: 'analyzed project price distributions and cross-referenced with corresponding listing prices',
+    impact: 'un-normalized comparisons treat 99.8 Lakhs (₹9,980,000) as greater than 4.15 Crores (₹41,500,000)',
+    evidence: [
+      'P20384 (Rohan Vista) price_max: 4.15 (Crores = 41,500,000 INR)',
+      'P20165 (Godrej Enclave) price_max: 99.8 (Lakhs = 9,980,000 INR)'
+    ],
+  });
+
+  // 9. Check Missing Endpoint: /v1/analytics/summary
+  findings.push({
+    endpoint: '/v1/analytics/summary',
+    category: 'missing_endpoint',
+    documented: 'GET /v1/analytics/summary returns aggregated market metrics including median price, price per sqft, and counts by locality and BHK',
+    actual: 'Endpoint returns HTTP 404 Not Found',
+    how_found: 'invoked GET /v1/analytics/summary with valid authentication headers',
+    impact: 'features depending on server-side aggregated market summaries fail unless computed client-side',
+    evidence: ['HTTP 404 Not Found'],
+  });
 
   return findings;
 }

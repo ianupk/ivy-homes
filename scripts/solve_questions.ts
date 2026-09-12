@@ -1,11 +1,35 @@
 import fs from 'fs';
 import path from 'path';
-import { AnswerKey, Finding, SubmissionData } from '../src/types';
+import { AnswerKey, Finding, SubmissionData } from '../src/types/index';
 import { runAudit } from './audit_api';
 
-const DATA_DIR = path.join(__dirname, '../data');
+function loadEnv() {
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx > 0) {
+        const key = trimmed.slice(0, idx).trim();
+        let val = trimmed.slice(idx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+}
+
+loadEnv();
+
+const DATA_DIR = path.join(process.cwd(), 'data');
 const ASSIGNED_LOCALITY = (process.env.IVY_ASSIGNED_LOCALITY || 'koramangala').toLowerCase().trim();
-const API_KEY = process.env.NEXT_PUBLIC_IVY_API_KEY || process.env.IVY_API_KEY || 'IVY26-DEMO-KEY';
+const API_KEY = process.env.IVY_API_KEY || process.env.NEXT_PUBLIC_IVY_API_KEY || 'IVY26-DEMO-KEY';
 const CANDIDATE_NAME = process.env.CANDIDATE_NAME || 'Candidate Name';
 const CANDIDATE_EMAIL = process.env.CANDIDATE_EMAIL || 'candidate@example.com';
 const REPO_URL = process.env.REPO_URL || 'https://github.com/candidate/ivy-assignment';
@@ -31,7 +55,7 @@ export function computeAnswers(): AnswerKey {
   // 1. total_listing_records
   const total_listing_records = listings.length;
 
-  // 4. corrupt_listing_ids (A small number of listing records describe something that cannot exist)
+  // 4. corrupt_listing_ids
   const corruptSet = new Set<string>();
   listings.forEach((item) => {
     const isCorrupt =
@@ -45,9 +69,8 @@ export function computeAnswers(): AnswerKey {
   });
   const corrupt_listing_ids = Array.from(corruptSet).sort();
 
-  // 9. fake_listing_ids (Listings that exist purely to generate enquiries)
+  // 9. fake_listing_ids
   const fakeSet = new Set<string>();
-  // Analyze seller contacts or placeholder patterns
   const contactMap = new Map<string, any[]>();
   listings.forEach((item) => {
     if (item.posted_by_contact) {
@@ -58,14 +81,13 @@ export function computeAnswers(): AnswerKey {
   });
 
   for (const [_, items] of contactMap.entries()) {
-    // If an agent posts an excessive number of identical price/specs across different areas
     if (items.length >= 8) {
       items.forEach((item) => fakeSet.add(item.listing_id));
     }
   }
   const fake_listing_ids = Array.from(fakeSet).sort();
 
-  // 2. unique_properties (deduplicated distinct properties)
+  // 2. unique_properties
   const propertyKeySet = new Set<string>();
   listings.forEach((item) => {
     const key = `${(item.apartment_name || item.locality).toLowerCase().trim()}_${item.bedroom}_${item.floor || 0}_${item.carpet_area || 0}`;
@@ -73,16 +95,15 @@ export function computeAnswers(): AnswerKey {
   });
   const unique_properties = propertyKeySet.size;
 
-  // 3. active_listings (is_live === true)
+  // 3. active_listings
   const active_listings = listings.filter((item) => item.is_live === true).length;
 
-  // 5. total_monthly_rent (across assigned locality)
+  // 5. total_monthly_rent
   const total_monthly_rent = rentals
     .filter((item) => (item.locality || '').toLowerCase().trim() === ASSIGNED_LOCALITY)
     .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
 
   // 6. avg_price_per_sqft_2bhk
-  // Across live 2bhk listings, leaving out records in 4 and 9: mean of price / carpet_area, to 2 decimals
   const excludedSet = new Set([...corrupt_listing_ids, ...fake_listing_ids]);
   const eligible2bhk = listings.filter((item) => {
     return (
@@ -104,19 +125,20 @@ export function computeAnswers(): AnswerKey {
         )
       : 0;
 
-  // 7. costliest_project: project with highest maximum price as { project_id: ..., price_max_inr: ... }
+  // 7. costliest_project
   let costliest: { project_id: string; price_max_inr: number } = { project_id: '', price_max_inr: 0 };
   projects.forEach((proj) => {
-    const maxPrice = Number(proj.price_max) || 0;
-    if (maxPrice > costliest.price_max_inr) {
+    const rawMax = Number(proj.price_max) || 0;
+    const inr = rawMax < 10 ? Math.round(rawMax * 10000000) : Math.round(rawMax * 100000);
+    if (inr > costliest.price_max_inr) {
       costliest = {
         project_id: proj.project_id,
-        price_max_inr: maxPrice,
+        price_max_inr: inr,
       };
     }
   });
 
-  // 8. listings_last_7_days: posted in [REFERENCE - 7 days, REFERENCE) in IST
+  // 8. listings_last_7_days
   const listings_last_7_days = listings.filter((item) => {
     if (!item.posted_at) return false;
     const postTime = new Date(item.posted_at).getTime();
@@ -169,7 +191,7 @@ export async function generateSubmission(): Promise<SubmissionData> {
     findings,
   };
 
-  const outPath = path.join(__dirname, '../submission.json');
+  const outPath = path.join(process.cwd(), 'submission.json');
   fs.writeFileSync(outPath, JSON.stringify(submission, null, 2), 'utf-8');
   console.log(`Generated submission file at ${outPath}`);
   return submission;
@@ -177,7 +199,22 @@ export async function generateSubmission(): Promise<SubmissionData> {
 
 if (require.main === module) {
   generateSubmission().then((sub) => {
-    console.log('Submission calculated successfully:');
-    console.log(JSON.stringify(sub.answers, null, 2));
+    console.log('\n======================================================');
+    console.log('              IVY HOMES DATA SOLVER SUMMARY           ');
+    console.log('======================================================');
+    console.log('1. total_listing_records:             ', sub.answers.total_listing_records);
+    console.log('2. unique_properties:                 ', sub.answers.unique_properties);
+    console.log('3. active_listings:                   ', sub.answers.active_listings);
+    console.log('4. corrupt_listing_ids (count):       ', `${sub.answers.corrupt_listing_ids.length} records (sample: ${sub.answers.corrupt_listing_ids.slice(0, 3).join(', ')}...)`);
+    console.log('5. total_monthly_rent (Miyapur):      ', `₹${sub.answers.total_monthly_rent.toLocaleString('en-IN')}`);
+    console.log('6. avg_price_per_sqft_2bhk:           ', `₹${sub.answers.avg_price_per_sqft_2bhk}/sq.ft`);
+    console.log('7. costliest_project:                 ', JSON.stringify(sub.answers.costliest_project));
+    console.log('8. listings_last_7_days:              ', sub.answers.listings_last_7_days);
+    console.log('9. fake_listing_ids (count):          ', `${sub.answers.fake_listing_ids.length} records (sample: ${sub.answers.fake_listing_ids.slice(0, 3).join(', ')}...)`);
+    console.log('10. projects_with_wrong_listing_count:', sub.answers.projects_with_wrong_listing_count);
+    console.log('======================================================');
+    console.log(`Audited discrepancies found: ${sub.findings.length}`);
+    console.log(`Updated submission file at: submission.json`);
+    console.log('======================================================\n');
   });
 }

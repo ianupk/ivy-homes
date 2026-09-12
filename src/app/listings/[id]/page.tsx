@@ -52,7 +52,6 @@ export default function ListingDetailPage() {
         }
         setListing(data);
 
-        // Fetch comparables
         const comps = await api.getSimilarListings(id);
         setComparables(comps.filter((c) => c.listing_id !== id));
       } catch (err: any) {
@@ -130,9 +129,6 @@ export default function ListingDetailPage() {
               )}
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-white/20 capitalize">
                 {listing.property_type || 'Apartment'}
-              </span>
-              <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-black/40 text-slate-300">
-                ID: {listing.listing_id}
               </span>
             </div>
 
@@ -234,11 +230,11 @@ export default function ListingDetailPage() {
                 <span className="font-semibold text-slate-900">{formatDate(listing.posted_at)}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
-                <span className="text-slate-500">Associated Project</span>
+                <span className="text-slate-500">Property Type</span>
                 {listing.project_id ? (
-                  <span className="font-semibold text-emerald-700">{listing.project_id}</span>
+                  <span className="font-semibold text-emerald-700">Gated Society Project</span>
                 ) : (
-                  <span className="text-slate-400">Independent / Resale</span>
+                  <span className="text-slate-600 font-semibold">Independent / Standalone</span>
                 )}
               </div>
             </div>

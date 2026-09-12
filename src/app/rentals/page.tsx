@@ -88,7 +88,7 @@ export default function RentalsPage() {
       {isLoading ? (
         <div className="py-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-          <p className="text-sm font-medium text-slate-600">Loading rentals from API...</p>
+          <p className="text-sm font-medium text-slate-600">Loading rental properties...</p>
         </div>
       ) : error ? (
         <div className="p-6 bg-red-50 border border-red-200 rounded-2xl flex items-center space-x-3 text-red-800 text-sm">

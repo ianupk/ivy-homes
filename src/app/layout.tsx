@@ -24,7 +24,7 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
-              Ivy Homes Real Estate Engineering Platform · Tested against Live APIs · September 2026
+              © 2026 Ivy Homes · Verified Real Estate, Rentals & Builder Developments · Miyapur
             </footer>
           </FavouritesProvider>
         </AuthProvider>

@@ -24,7 +24,6 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
 
   const getStorageKey = () => (user?.email ? `ivy_favs_${user.email}` : 'ivy_favs_guest');
 
-  // Load favourites when user changes or on mount
   useEffect(() => {
     loadFavourites();
   }, [user?.email, token]);
@@ -44,7 +43,6 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
       if (token) {
         const serverFavs = await api.getFavourites(token);
         if (serverFavs && serverFavs.length > 0) {
-          // Merge server and local
           const mergedMap = new Map<string, Listing>();
           [...localFavs, ...serverFavs].forEach((item) => mergedMap.set(item.listing_id, item));
           const merged = Array.from(mergedMap.values());
@@ -71,7 +69,6 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
     const id = listing.listing_id;
 
     if (favouriteIds.has(id)) {
-      // Remove
       const updated = favourites.filter((f) => f.listing_id !== id);
       setFavourites(updated);
       setFavouriteIds(new Set(updated.map((f) => f.listing_id)));
@@ -80,7 +77,6 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
         await api.removeFavourite(id, token);
       }
     } else {
-      // Add
       const updated = [listing, ...favourites];
       setFavourites(updated);
       setFavouriteIds(new Set(updated.map((f) => f.listing_id)));

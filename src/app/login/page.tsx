@@ -32,11 +32,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemo = (demoNum: 1 | 2 | 3) => {
-    setEmail(`demo${demoNum}@ivy.homes`);
-    setPassword(process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'demo-password');
-  };
-
   return (
     <div className="max-w-md mx-auto py-12 px-4">
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
@@ -47,7 +42,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Account Login</h1>
           <p className="text-xs text-slate-500">
-            Authenticate against <code className="bg-slate-100 px-1 py-0.5 rounded">POST /auth/login</code>. Session lasts 24h across reloads.
+            Sign in to access your saved properties, schedules, and personalized home recommendations.
           </p>
         </div>
 
@@ -86,7 +81,7 @@ export default function LoginPage() {
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="email"
-                  placeholder="demo1@ivy.homes"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -101,7 +96,7 @@ export default function LoginPage() {
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="password"
-                  placeholder="Issued with your API key"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -116,7 +111,7 @@ export default function LoginPage() {
               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
             >
               {loading ? (
-                <span>Authenticating...</span>
+                <span>Signing In...</span>
               ) : (
                 <>
                   <span>Sign In</span>
@@ -124,25 +119,6 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-
-            {/* Quick Demo Accounts */}
-            <div className="pt-4 border-t border-slate-100">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 text-center">
-                One-Click Fill Demo Credentials
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => handleQuickDemo(num as 1 | 2 | 3)}
-                    className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 transition"
-                  >
-                    demo{num}
-                  </button>
-                ))}
-              </div>
-            </div>
           </form>
         )}
       </div>

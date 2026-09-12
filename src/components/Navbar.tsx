@@ -9,7 +9,7 @@ import { useFavourites } from '@/context/FavouritesContext';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, logout, loginDemo } = useAuth();
+  const { user, logout } = useAuth();
   const { favourites } = useFavourites();
 
   const navLinks = [
@@ -80,30 +80,13 @@ export function Navbar() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <div className="hidden lg:flex items-center space-x-1 text-xs">
-                  <span className="text-gray-500">Demo Login:</span>
-                  <button
-                    onClick={() => loginDemo(1)}
-                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium"
-                  >
-                    User 1
-                  </button>
-                  <button
-                    onClick={() => loginDemo(2)}
-                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium"
-                  >
-                    User 2
-                  </button>
-                </div>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
-                >
-                  <User className="w-4 h-4 mr-1.5" />
-                  Log in
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
+              >
+                <User className="w-4 h-4 mr-1.5" />
+                Log in
+              </Link>
             )}
           </div>
         </div>
