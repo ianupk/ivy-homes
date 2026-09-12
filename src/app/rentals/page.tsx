@@ -10,7 +10,7 @@ export default function RentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [localitySearch, setLocalitySearch] = useState('');
+  const [localitySearch, setLocalitySearch] = useState(process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur');
   const [bhkFilter, setBhkFilter] = useState('all');
 
   useEffect(() => {
@@ -18,7 +18,8 @@ export default function RentalsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await api.getRentals({ limit: 100 });
+        const assigned = (process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur').toLowerCase();
+        const data = await api.getRentals({ locality: assigned, limit: 100 });
         setRentals(data.results || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load rental properties');
@@ -45,13 +46,13 @@ export default function RentalsPage() {
       <div>
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-2">
           <KeyRound className="w-3.5 h-3.5" />
-          <span>Long Term & Verified Leases</span>
+          <span>Direct Owner Verified Rentals</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           Browse Verified Rental Properties
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Showing {filteredRentals.length} available rentals with verified monthly rent, deposit, and carpet areas.
+          Showing verified rentals with transparent monthly rent, deposit terms, and authentic carpet areas.
         </p>
       </div>
 
@@ -61,7 +62,7 @@ export default function RentalsPage() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3" />
           <input
             type="text"
-            placeholder="Filter by locality (e.g. Koramangala)..."
+            placeholder="Filter by locality (e.g. Miyapur)..."
             value={localitySearch}
             onChange={(e) => setLocalitySearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"

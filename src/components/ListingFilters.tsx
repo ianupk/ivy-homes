@@ -67,7 +67,7 @@ export function ListingFilters({
             <div className="relative">
               <input
                 type="text"
-                placeholder="e.g. Koramangala"
+                placeholder="e.g. Miyapur"
                 value={filters.locality}
                 onChange={(e) => handleChange('locality', e.target.value)}
                 className="w-full text-sm rounded-xl border border-gray-300 py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"

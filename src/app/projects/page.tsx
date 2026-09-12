@@ -18,7 +18,8 @@ export default function ProjectsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await api.getProjects({ limit: 100 });
+        const assigned = (process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur').toLowerCase();
+        const data = await api.getProjects({ locality: assigned, limit: 100 });
         setProjects(data.results || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load projects');
@@ -55,7 +56,7 @@ export default function ProjectsPage() {
           Builder Projects & Communities
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Showing {filteredProjects.length} projects with transparent carpet area ranges and min/max pricing.
+          Showing verified RERA registered projects with transparent carpet area ranges and min/max pricing.
         </p>
       </div>
 
@@ -65,7 +66,7 @@ export default function ProjectsPage() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3" />
           <input
             type="text"
-            placeholder="Search by project name, developer, or locality..."
+            placeholder="Search by project name, developer, or locality (e.g. Miyapur)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500"

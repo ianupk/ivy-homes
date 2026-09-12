@@ -16,7 +16,7 @@ export default function ListingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<FilterState>({
-    locality: '',
+    locality: process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur',
     bhk: 'all',
     min_price: '',
     max_price: '',
@@ -95,7 +95,7 @@ export default function ListingsPage() {
 
   const handleReset = () => {
     setFilters({
-      locality: '',
+      locality: process.env.NEXT_PUBLIC_IVY_ASSIGNED_LOCALITY || 'Miyapur',
       bhk: 'all',
       min_price: '',
       max_price: '',
@@ -117,7 +117,7 @@ export default function ListingsPage() {
             Browse Properties for Sale
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Displaying live verified properties. Showing {filteredListings.length} of {totalCount} total listings.
+            Displaying verified residential properties in {filters.locality || 'Miyapur'}.
           </p>
         </div>
       </div>

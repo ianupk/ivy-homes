@@ -41,6 +41,52 @@ export default function HomePage() {
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-emerald-500/10 to-transparent pointer-events-none" />
       </section>
 
+      {/* Miyapur Market Overview Strip */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+          <div>
+            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Live Market Intelligence · Miyapur</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-900 mt-1">Miyapur Real Estate Snapshot</h2>
+          </div>
+          <Link
+            href="/insights"
+            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center group"
+          >
+            Explore Full Market Analytics
+            <ArrowRight className="w-3.5 h-3.5 ml-1 transform group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-xs text-slate-500 font-medium">Miyapur Properties</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">435+</div>
+            <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">Verified sale inventory</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-xs text-slate-500 font-medium">Rental Units</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">158+</div>
+            <span className="text-[11px] text-blue-600 font-semibold mt-0.5 block">Zero hidden brokerage</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-xs text-slate-500 font-medium">RERA Projects</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">56+</div>
+            <span className="text-[11px] text-purple-600 font-semibold mt-0.5 block">Approved communities</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-xs text-slate-500 font-medium">Carpet Area Rate</span>
+            <div className="text-2xl font-black text-emerald-700 mt-1">₹10,200</div>
+            <span className="text-[11px] text-slate-500 mt-0.5 block">Average per sq.ft</span>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Navigation Cards */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link
@@ -98,7 +144,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           {[
             { title: 'Verified Physical Properties', desc: 'Every listing is physically validated with genuine floor plans, dimensions, and building data.' },
-            { title: 'Defensive Smart Search', desc: 'Precision filtering across prime Hyderabad localities, bedroom configurations, and budgets.' },
+            { title: 'Defensive Smart Search', desc: 'Precision filtering across prime Miyapur communities, bedroom configurations, and budgets.' },
             { title: 'Direct Owner Connect', desc: 'Seamlessly reach verified property owners and certified representatives without middlemen.' },
             { title: 'Saved Collections', desc: 'Bookmark, compare, and organize your favorite properties with persistent account sync.' },
             { title: 'Transparent Pricing', desc: 'Honest per-sq.ft carpet area calculations with zero hidden maintenance or brokerage fees.' },

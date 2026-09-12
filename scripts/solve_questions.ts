@@ -28,7 +28,7 @@ function loadEnv() {
 loadEnv();
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const ASSIGNED_LOCALITY = (process.env.IVY_ASSIGNED_LOCALITY || 'koramangala').toLowerCase().trim();
+const ASSIGNED_LOCALITY = (process.env.IVY_ASSIGNED_LOCALITY || 'miyapur').toLowerCase().trim();
 const API_KEY = process.env.IVY_API_KEY || process.env.NEXT_PUBLIC_IVY_API_KEY || 'IVY26-DEMO-KEY';
 const CANDIDATE_NAME = process.env.CANDIDATE_NAME || 'Candidate Name';
 const CANDIDATE_EMAIL = process.env.CANDIDATE_EMAIL || 'candidate@example.com';

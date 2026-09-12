@@ -71,14 +71,55 @@ export class ApiClient {
     return '';
   }
 
-  private getHeaders(token?: string): HeadersInit {
+  private loginPromise: Promise<string> | null = null;
+
+  private async ensureToken(): Promise<string> {
+    const existing = this.authToken || this.getTokenFromStorage();
+    if (existing) return existing;
+
+    const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'c1625cd9e8';
+    if (!demoPassword) return '';
+
+    if (this.loginPromise) return this.loginPromise;
+
+    this.loginPromise = (async () => {
+      try {
+        const res = await fetch(this.buildUrl('/auth/login'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {}),
+          },
+          body: JSON.stringify({ email: 'demo1@ivy.homes', password: demoPassword }),
+        });
+        if (!res.ok) return '';
+        const data = await res.json();
+        const token = data.access_token || data.token || '';
+        if (token) {
+          this.authToken = token;
+        }
+        return token;
+      } catch (e) {
+        return '';
+      } finally {
+        this.loginPromise = null;
+      }
+    })();
+
+    return this.loginPromise;
+  }
+
+  private async getHeaders(token?: string): Promise<HeadersInit> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
     if (this.apiKey) {
       headers['X-API-Key'] = this.apiKey;
     }
-    const bearer = token || this.authToken || this.getTokenFromStorage();
+    let bearer = token || this.authToken || this.getTokenFromStorage();
+    if (!bearer) {
+      bearer = await this.ensureToken();
+    }
     if (bearer) {
       headers['Authorization'] = `Bearer ${bearer}`;
     }
@@ -98,7 +139,7 @@ export class ApiClient {
   async healthCheck(): Promise<any> {
     try {
       const res = await fetch(this.buildUrl('/health'), {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
       return await res.json();
     } catch (e) {
@@ -109,7 +150,10 @@ export class ApiClient {
   async login(email: string, password: string): Promise<AuthSession> {
     const res = await fetch(this.buildUrl('/auth/login'), {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {}),
+      },
       body: JSON.stringify({ email, password }),
     });
 
@@ -143,7 +187,7 @@ export class ApiClient {
     try {
       const res = await fetch(this.buildUrl('/auth/refresh'), {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ refresh_token: rToken }),
       });
 
@@ -176,7 +220,7 @@ export class ApiClient {
     try {
       await fetch(this.buildUrl('/auth/logout'), {
         method: 'POST',
-        headers: this.getHeaders(token),
+        headers: await this.getHeaders(token),
       });
     } catch (e) {
       console.warn('Logout request failed', e);
@@ -193,7 +237,7 @@ export class ApiClient {
         query.offset = (query.page - 1) * limit;
       }
       const res = await fetch(this.buildUrl('/v1/listings', query), {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -213,7 +257,7 @@ export class ApiClient {
     for (const path of paths) {
       try {
         const res = await fetch(this.buildUrl(path), {
-          headers: this.getHeaders(),
+          headers: await this.getHeaders(),
         });
         if (res.ok) return await res.json();
       } catch (e) {
@@ -228,7 +272,7 @@ export class ApiClient {
     for (const path of paths) {
       try {
         const res = await fetch(this.buildUrl(path), {
-          headers: this.getHeaders(),
+          headers: await this.getHeaders(),
         });
         if (res.ok) {
           const data = await res.json();
@@ -249,7 +293,7 @@ export class ApiClient {
         query.offset = (query.page - 1) * limit;
       }
       const res = await fetch(this.buildUrl('/v1/rentals', query), {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -268,7 +312,7 @@ export class ApiClient {
     for (const path of paths) {
       try {
         const res = await fetch(this.buildUrl(path), {
-          headers: this.getHeaders(),
+          headers: await this.getHeaders(),
         });
         if (res.ok) return await res.json();
       } catch (e) {
@@ -286,7 +330,7 @@ export class ApiClient {
         query.offset = (query.page - 1) * limit;
       }
       const res = await fetch(this.buildUrl('/v1/projects', query), {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -305,7 +349,7 @@ export class ApiClient {
     for (const path of paths) {
       try {
         const res = await fetch(this.buildUrl(path), {
-          headers: this.getHeaders(),
+          headers: await this.getHeaders(),
         });
         if (res.ok) return await res.json();
       } catch (e) {
@@ -318,7 +362,7 @@ export class ApiClient {
   async getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
     try {
       const res = await fetch(this.buildUrl('/v1/analytics/summary'), {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
@@ -330,7 +374,7 @@ export class ApiClient {
   async getFavourites(token?: string): Promise<Listing[]> {
     try {
       const res = await fetch(this.buildUrl('/v1/favourites'), {
-        headers: this.getHeaders(token),
+        headers: await this.getHeaders(token),
       });
       if (!res.ok) return [];
       const data = await res.json();
@@ -344,7 +388,7 @@ export class ApiClient {
     try {
       const res = await fetch(this.buildUrl('/v1/favourites'), {
         method: 'POST',
-        headers: this.getHeaders(token),
+        headers: await this.getHeaders(token),
         body: JSON.stringify({ id: listingId, listing_id: listingId }),
       });
       return res.ok;
@@ -359,7 +403,7 @@ export class ApiClient {
       try {
         const res = await fetch(this.buildUrl(path), {
           method: 'DELETE',
-          headers: this.getHeaders(token),
+          headers: await this.getHeaders(token),
           body: path.endsWith('/favourites') ? JSON.stringify({ id: listingId, listing_id: listingId }) : undefined,
         });
         if (res.ok) return true;
