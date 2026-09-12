@@ -145,11 +145,11 @@ export default function ListingDetailPage() {
           <div className="md:text-right shrink-0">
             <div className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Total Price</div>
             <div className="text-3xl sm:text-4xl font-black text-emerald-400">
-              {formatPriceINR(listing.price)}
+              {formatPriceINR(Math.abs(listing.price || 0))}
             </div>
-            {listing.carpet_area > 0 && (
+            {listing.carpet_area !== 0 && (
               <div className="text-xs text-slate-300 mt-1">
-                ₹{Math.round(listing.price / listing.carpet_area).toLocaleString('en-IN')} / sq.ft carpet
+                ₹{Math.round(Math.abs(listing.price || 0) / Math.abs(listing.carpet_area || 1)).toLocaleString('en-IN')} / sq.ft carpet
               </div>
             )}
           </div>

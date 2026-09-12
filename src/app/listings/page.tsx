@@ -43,7 +43,12 @@ export default function ListingsPage() {
       if (filters.furnishing !== 'all') params.furnishing = filters.furnishing;
 
       const data = await api.getListings(params);
-      setListings(data.results || []);
+      const sanitized = (data.results || []).map((l) => ({
+        ...l,
+        price: Math.abs(l.price || 0),
+        carpet_area: Math.abs(l.carpet_area || 0),
+      }));
+      setListings(sanitized);
       setTotalCount(data.total || data.results?.length || 0);
     } catch (err: any) {
       setError(err.message || 'Failed to load listings');

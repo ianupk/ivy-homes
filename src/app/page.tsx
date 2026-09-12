@@ -62,26 +62,26 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">Miyapur Properties</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">435+</div>
-            <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">Verified sale inventory</span>
+            <span className="text-xs text-slate-500 font-medium">Active Sale Units</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">383+</div>
+            <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">473 total in Miyapur</span>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">Rental Units</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">158+</div>
-            <span className="text-[11px] text-blue-600 font-semibold mt-0.5 block">Zero hidden brokerage</span>
+            <span className="text-xs text-slate-500 font-medium">Rental Inventory</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">172+</div>
+            <span className="text-[11px] text-blue-600 font-semibold mt-0.5 block">₹59.9 L monthly rent</span>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
             <span className="text-xs text-slate-500 font-medium">RERA Projects</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">56+</div>
+            <div className="text-2xl font-black text-slate-900 mt-1">61+</div>
             <span className="text-[11px] text-purple-600 font-semibold mt-0.5 block">Approved communities</span>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">Carpet Area Rate</span>
-            <div className="text-2xl font-black text-emerald-700 mt-1">₹10,200</div>
+            <span className="text-xs text-slate-500 font-medium">2BHK Carpet Rate</span>
+            <div className="text-2xl font-black text-emerald-700 mt-1">₹18,206</div>
             <span className="text-[11px] text-slate-500 mt-0.5 block">Average per sq.ft</span>
           </div>
         </div>

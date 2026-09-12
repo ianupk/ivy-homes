@@ -62,11 +62,11 @@ export function PropertyCard({ listing }: { listing: Listing }) {
           <div className="flex items-baseline justify-between mb-3">
             <div>
               <span className="text-2xl font-black text-gray-900 tracking-tight">
-                {formatPriceINR(listing.price)}
+                {formatPriceINR(Math.abs(listing.price || 0))}
               </span>
-              {listing.carpet_area > 0 && (
+              {listing.carpet_area !== 0 && (
                 <span className="text-xs text-gray-500 ml-2">
-                  ₹{Math.round(listing.price / listing.carpet_area).toLocaleString('en-IN')}/sq.ft
+                  ₹{Math.round(Math.abs(listing.price || 0) / Math.abs(listing.carpet_area || 1)).toLocaleString('en-IN')}/sq.ft
                 </span>
               )}
             </div>
