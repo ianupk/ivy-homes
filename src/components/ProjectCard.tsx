@@ -3,7 +3,7 @@
 import React from 'react';
 import { Building2, Layers, Calendar, CheckCircle, Tag } from 'lucide-react';
 import { Project } from '@/types';
-import { formatPriceINR, formatArea } from '@/lib/utils';
+import { formatProjectPrice, formatArea } from '@/lib/utils';
 
 export function ProjectCard({ project }: { project: Project }) {
   return (
@@ -37,7 +37,13 @@ export function ProjectCard({ project }: { project: Project }) {
           <div className="mb-3">
             <span className="text-xs text-gray-500 block">Price Range</span>
             <span className="text-xl font-black text-gray-900">
-              {formatPriceINR(project.price_min)} - {formatPriceINR(project.price_max)}
+              {project.price_min && project.price_max
+                ? `${formatProjectPrice(project.price_min)} - ${formatProjectPrice(project.price_max)}`
+                : project.price_min
+                ? `From ${formatProjectPrice(project.price_min)}`
+                : project.price_max
+                ? `Up to ${formatProjectPrice(project.price_max)}`
+                : 'Price on Request'}
             </span>
           </div>
 

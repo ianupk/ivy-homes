@@ -22,6 +22,24 @@ export function formatPriceINR(amount: number): string {
   }).format(amount);
 }
 
+export function normalizeProjectPriceToINR(val: number): number {
+  if (!val || isNaN(val) || val <= 0) return 0;
+  if (val >= 100000) return val;
+  if (val < 10) return Math.round(val * 10000000);
+  return Math.round(val * 100000);
+}
+
+export function formatProjectPrice(val: number): string {
+  if (!val || isNaN(val) || val <= 0) return 'Price on Request';
+  if (val >= 100000) return formatPriceINR(val);
+  if (val < 10) {
+    const formatted = val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(/\.?0+$/, '');
+    return `₹${formatted} Cr`;
+  }
+  const formatted = val % 1 === 0 ? val.toFixed(0) : val.toFixed(1).replace(/\.?0+$/, '');
+  return `₹${formatted} L`;
+}
+
 export function formatArea(sqft: number): string {
   if (!sqft || isNaN(sqft)) return '0 sq.ft';
   return `${sqft.toLocaleString('en-IN')} sq.ft`;
