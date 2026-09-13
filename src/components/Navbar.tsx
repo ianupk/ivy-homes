@@ -3,13 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, KeyRound, Building2, Heart, BarChart3, User, LogOut, CheckCircle2 } from 'lucide-react';
+import { Home, KeyRound, Building2, Heart, BarChart3, User, LogOut, MapPin } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useFavourites } from '@/context/FavouritesContext';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const { favourites } = useFavourites();
 
   const navLinks = [
@@ -65,16 +65,28 @@ export function Navbar() {
 
           {/* User Auth Section */}
           <div className="flex items-center space-x-3">
-            {user ? (
+            {isLoading ? (
+              <div className="h-9 w-28 bg-slate-100 animate-pulse rounded-xl" />
+            ) : user ? (
               <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-2 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-full border border-emerald-200 text-xs sm:text-sm">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="font-medium truncate max-w-[120px] sm:max-w-[160px]">{user.email}</span>
-                </div>
+                <Link
+                  href="/login"
+                  title="View Account Profile"
+                  className="flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100/70 text-emerald-800 px-3 py-1.5 rounded-full border border-emerald-200 text-xs sm:text-sm transition"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="font-medium truncate max-w-[110px] sm:max-w-[140px]">{user.email}</span>
+                  {user.assigned_locality && (
+                    <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-200/60 text-[10px] font-bold uppercase tracking-wider text-emerald-900">
+                      <MapPin className="w-2.5 h-2.5 mr-0.5" />
+                      {user.assigned_locality}
+                    </span>
+                  )}
+                </Link>
                 <button
                   onClick={() => logout()}
-                  title="Log out"
-                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-lg transition"
+                  title="Sign out"
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>

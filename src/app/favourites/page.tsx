@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Home, ArrowLeft } from 'lucide-react';
+import { Heart, Home, ArrowLeft, Loader2 } from 'lucide-react';
 import { useFavourites } from '@/context/FavouritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -25,15 +25,23 @@ export default function FavouritesPage() {
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
           {user ? (
             <span>
-              Saved properties synced for account <strong className="text-slate-700">{user.email}</strong>.
+              Saved properties synced with Ivy Homes cloud for account{' '}
+              <strong className="text-slate-700 font-semibold">{user.email}</strong>.
             </span>
           ) : (
-            <span>Saved properties stored in local session. Log in to sync across devices.</span>
+            <span>
+              Saved properties stored in guest mode. <Link href="/login" className="text-emerald-700 underline font-semibold">Log in</Link> to sync across your devices.
+            </span>
           )}
         </p>
       </div>
 
-      {favourites.length === 0 ? (
+      {isLoading ? (
+        <div className="py-20 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <p className="text-xs text-slate-500 font-medium">Syncing saved properties...</p>
+        </div>
+      ) : favourites.length === 0 ? (
         <div className="py-20 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-4 max-w-lg mx-auto">
           <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
             <Heart className="w-8 h-8" />

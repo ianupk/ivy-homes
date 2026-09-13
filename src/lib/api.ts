@@ -1,4 +1,4 @@
-import { Listing, Rental, Project, AnalyticsSummary, AuthSession } from '@/types';
+import { Listing, Rental, Project, AnalyticsSummary, AuthSession, User } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_IVY_API_BASE || 'https://solve.ivy.homes';
 const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_IVY_API_KEY || '';
@@ -21,6 +21,11 @@ export class ApiClient {
   private baseUrl: string;
   private apiKey: string;
   private authToken: string = '';
+  private tokenExpiresAt: number = 0;
+  private guestToken: string = '';
+  private guestTokenExpiresAt: number = 0;
+  private refreshPromise: Promise<AuthSession | null> | null = null;
+  private loginPromise: Promise<string> | null = null;
 
   constructor(baseUrl = API_BASE, apiKey = DEFAULT_API_KEY) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -35,47 +40,56 @@ export class ApiClient {
     return this.apiKey;
   }
 
-  setAuthToken(token: string) {
+  setAuthToken(token: string, expiresAt: number = 0) {
     this.authToken = token;
+    this.tokenExpiresAt = expiresAt;
   }
 
   getAuthToken(): string {
     return this.authToken;
   }
 
-  private getTokenFromStorage(): string {
-    if (typeof window === 'undefined') return '';
+  getSessionFromStorage(): AuthSession | null {
+    if (typeof window === 'undefined') return null;
     try {
       const stored = localStorage.getItem('ivy_session');
       if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.token || parsed.access_token || '';
+        return JSON.parse(stored) as AuthSession;
       }
     } catch (e) {
       // ignore
     }
-    return '';
+    return null;
   }
 
-  private getRefreshTokenFromStorage(): string {
-    if (typeof window === 'undefined') return '';
-    try {
-      const stored = localStorage.getItem('ivy_session');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.refresh_token || '';
-      }
-    } catch (e) {
-      // ignore
+  getTokenFromStorage(): string {
+    const session = this.getSessionFromStorage();
+    if (!session) return '';
+    if (session.expires_at && session.expires_at <= Date.now()) {
+      return '';
     }
-    return '';
+    return session.token || '';
   }
 
-  private loginPromise: Promise<string> | null = null;
+  getRefreshTokenFromStorage(): string {
+    const session = this.getSessionFromStorage();
+    return session?.refresh_token || '';
+  }
+
+  private isTokenExpired(expiresAt: number, bufferSeconds = 60): boolean {
+    if (!expiresAt) return false;
+    return Date.now() >= expiresAt - bufferSeconds * 1000;
+  }
 
   private async ensureToken(): Promise<string> {
     const existing = this.authToken || this.getTokenFromStorage();
-    if (existing) return existing;
+    if (existing && !this.isTokenExpired(this.tokenExpiresAt, 30)) {
+      return existing;
+    }
+
+    if (this.guestToken && !this.isTokenExpired(this.guestTokenExpiresAt, 30)) {
+      return this.guestToken;
+    }
 
     const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'c1625cd9e8';
     if (!demoPassword) return '';
@@ -84,19 +98,24 @@ export class ApiClient {
 
     this.loginPromise = (async () => {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (this.apiKey) {
+          headers['X-API-Key'] = this.apiKey;
+        }
+
         const res = await fetch(this.buildUrl('/auth/login'), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {}),
-          },
+          headers,
           body: JSON.stringify({ email: 'demo1@ivy.homes', password: demoPassword }),
         });
         if (!res.ok) return '';
         const data = await res.json();
         const token = data.access_token || data.token || '';
         if (token) {
-          this.authToken = token;
+          this.guestToken = token;
+          this.guestTokenExpiresAt = Date.now() + (data.expires_in || 900) * 1000;
         }
         return token;
       } catch (e) {
@@ -109,24 +128,96 @@ export class ApiClient {
     return this.loginPromise;
   }
 
-  private async getHeaders(token?: string): Promise<HeadersInit> {
+  async getHeaders(token?: string): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
     if (this.apiKey) {
       headers['X-API-Key'] = this.apiKey;
     }
-    let bearer = token || this.authToken || this.getTokenFromStorage();
-    if (!bearer) {
-      bearer = await this.ensureToken();
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      return headers;
     }
-    if (bearer) {
-      headers['Authorization'] = `Bearer ${bearer}`;
+
+    const session = this.getSessionFromStorage();
+    if (session) {
+      if (session.refresh_token && this.isTokenExpired(session.expires_at, 60)) {
+        try {
+          const refreshed = await this.refresh(session.refresh_token);
+          if (refreshed?.token) {
+            headers['Authorization'] = `Bearer ${refreshed.token}`;
+            return headers;
+          }
+        } catch (e) {
+          // fallback
+        }
+      }
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+        return headers;
+      }
     }
+
+    if (this.authToken && !this.isTokenExpired(this.tokenExpiresAt, 30)) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+      return headers;
+    }
+
+    const guestBearer = await this.ensureToken();
+    if (guestBearer) {
+      headers['Authorization'] = `Bearer ${guestBearer}`;
+    }
+
     return headers;
   }
 
-  private buildUrl(path: string, params: Record<string, any> = {}): string {
+  async fetchWithAuth(url: string, options: RequestInit = {}, retryOn401 = true): Promise<Response> {
+    const headers = await this.getHeaders();
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers as Record<string, string> || {}),
+      },
+    });
+
+    if (res.status === 401 && retryOn401) {
+      const session = this.getSessionFromStorage();
+      if (session?.refresh_token) {
+        const refreshed = await this.refresh(session.refresh_token);
+        if (refreshed?.token) {
+          const retryHeaders = await this.getHeaders(refreshed.token);
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...retryHeaders,
+              ...(options.headers as Record<string, string> || {}),
+            },
+          });
+        }
+      } else {
+        this.guestToken = '';
+        this.guestTokenExpiresAt = 0;
+        const newGuestToken = await this.ensureToken();
+        if (newGuestToken) {
+          const retryHeaders = await this.getHeaders(newGuestToken);
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...retryHeaders,
+              ...(options.headers as Record<string, string> || {}),
+            },
+          });
+        }
+      }
+    }
+
+    return res;
+  }
+
+  buildUrl(path: string, params: Record<string, any> = {}): string {
     const url = new URL(`${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`);
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {
@@ -138,23 +229,44 @@ export class ApiClient {
 
   async healthCheck(): Promise<any> {
     try {
-      const res = await fetch(this.buildUrl('/health'), {
-        headers: await this.getHeaders(),
-      });
+      const res = await this.fetchWithAuth(this.buildUrl('/health'));
       return await res.json();
     } catch (e) {
       return { status: 'offline', error: String(e) };
     }
   }
 
+  async getCurrentUser(token?: string): Promise<User | null> {
+    try {
+      const headers = await this.getHeaders(token);
+      const res = await fetch(this.buildUrl('/v1/me'), { headers });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        email: data.user?.email || '',
+        name: (data.user?.email || '').split('@')[0],
+        city: data.city,
+        assigned_locality: data.assigned_locality,
+        city_id: data.city_id,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   async login(email: string, password: string): Promise<AuthSession> {
+    const cleanEmail = email.trim();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.apiKey) {
+      headers['X-API-Key'] = this.apiKey;
+    }
+
     const res = await fetch(this.buildUrl('/auth/login'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {}),
-      },
-      body: JSON.stringify({ email, password }),
+      headers,
+      body: JSON.stringify({ email: cleanEmail, password }),
     });
 
     if (!res.ok) {
@@ -164,19 +276,52 @@ export class ApiClient {
 
     const data = await res.json();
     const token = data.access_token || data.token;
+    const expiresIn = data.expires_in || 900;
+    const expiresAt = Date.now() + expiresIn * 1000;
+
     this.authToken = token;
+    this.tokenExpiresAt = expiresAt;
+
+    let userProfile: User = {
+      email: data.user?.email || cleanEmail,
+      name: data.user?.name || (data.user?.email || cleanEmail).split('@')[0],
+    };
+
+    // Enrich user profile from /v1/me
+    try {
+      const meRes = await fetch(this.buildUrl('/v1/me'), {
+        headers: {
+          ...headers,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        userProfile = {
+          ...userProfile,
+          city: meData.city,
+          assigned_locality: meData.assigned_locality,
+          city_id: meData.city_id,
+        };
+      }
+    } catch (e) {
+      // non-fatal
+    }
 
     const session: AuthSession = {
       token,
       refresh_token: data.refresh_token,
       token_type: data.token_type || 'Bearer',
-      expires_in: data.expires_in || 900,
-      expires_at: Date.now() + (data.expires_in || 900) * 1000,
-      user: {
-        email: data.user?.email || email,
-        name: data.user?.name || (data.user?.email || email).split('@')[0],
-      },
+      expires_in: expiresIn,
+      expires_at: expiresAt,
+      user: userProfile,
     };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ivy_session', JSON.stringify(session));
+      window.dispatchEvent(new CustomEvent('ivy_auth_changed', { detail: session }));
+    }
+
     return session;
   }
 
@@ -184,48 +329,121 @@ export class ApiClient {
     const rToken = refreshToken || this.getRefreshTokenFromStorage();
     if (!rToken) return null;
 
-    try {
-      const res = await fetch(this.buildUrl('/auth/refresh'), {
-        method: 'POST',
-        headers: await this.getHeaders(),
-        body: JSON.stringify({ refresh_token: rToken }),
-      });
+    if (this.refreshPromise) return this.refreshPromise;
 
-      if (!res.ok) return null;
-      const data = await res.json();
-      const token = data.access_token || data.token;
-      this.authToken = token;
+    this.refreshPromise = (async () => {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (this.apiKey) {
+          headers['X-API-Key'] = this.apiKey;
+        }
 
-      const session: AuthSession = {
-        token,
-        refresh_token: data.refresh_token || rToken,
-        token_type: data.token_type || 'Bearer',
-        expires_in: data.expires_in || 900,
-        expires_at: Date.now() + (data.expires_in || 900) * 1000,
-        user: {
-          email: data.user?.email || 'user',
-          name: data.user?.name || (data.user?.email || 'user').split('@')[0],
-        },
-      };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ivy_session', JSON.stringify(session));
+        const res = await fetch(this.buildUrl('/auth/refresh'), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ refresh_token: rToken }),
+        });
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 400) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('ivy_session');
+              window.dispatchEvent(new CustomEvent('ivy_auth_changed', { detail: null }));
+            }
+          }
+          return null;
+        }
+
+        const data = await res.json();
+        const token = data.access_token || data.token;
+        const expiresIn = data.expires_in || 900;
+        const expiresAt = Date.now() + expiresIn * 1000;
+
+        this.authToken = token;
+        this.tokenExpiresAt = expiresAt;
+
+        const currentStored = this.getSessionFromStorage();
+        let userProfile: User = {
+          email: data.user?.email || currentStored?.user?.email || 'user',
+          name: data.user?.name || currentStored?.user?.name || (data.user?.email || currentStored?.user?.email || 'user').split('@')[0],
+          city: currentStored?.user?.city,
+          assigned_locality: currentStored?.user?.assigned_locality,
+          city_id: currentStored?.user?.city_id,
+        };
+
+        if (!userProfile.assigned_locality) {
+          try {
+            const meRes = await fetch(this.buildUrl('/v1/me'), {
+              headers: {
+                ...headers,
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              userProfile = {
+                ...userProfile,
+                city: meData.city,
+                assigned_locality: meData.assigned_locality,
+                city_id: meData.city_id,
+              };
+            }
+          } catch (e) {}
+        }
+
+        const session: AuthSession = {
+          token,
+          refresh_token: data.refresh_token || rToken,
+          token_type: data.token_type || 'Bearer',
+          expires_in: expiresIn,
+          expires_at: expiresAt,
+          user: userProfile,
+        };
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ivy_session', JSON.stringify(session));
+          window.dispatchEvent(new CustomEvent('ivy_auth_changed', { detail: session }));
+        }
+        return session;
+      } catch (e) {
+        return null;
+      } finally {
+        this.refreshPromise = null;
       }
-      return session;
-    } catch (e) {
-      return null;
-    }
+    })();
+
+    return this.refreshPromise;
   }
 
   async logout(token?: string): Promise<void> {
     try {
-      await fetch(this.buildUrl('/auth/logout'), {
-        method: 'POST',
-        headers: await this.getHeaders(token),
-      });
+      const session = this.getSessionFromStorage();
+      const bearer = token || session?.token || this.authToken;
+      if (bearer) {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (this.apiKey) {
+          headers['X-API-Key'] = this.apiKey;
+        }
+        headers['Authorization'] = `Bearer ${bearer}`;
+
+        await fetch(this.buildUrl('/auth/logout'), {
+          method: 'POST',
+          headers,
+        });
+      }
     } catch (e) {
       console.warn('Logout request failed', e);
     } finally {
       this.authToken = '';
+      this.tokenExpiresAt = 0;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ivy_session');
+        window.dispatchEvent(new CustomEvent('ivy_auth_changed', { detail: null }));
+      }
     }
   }
 
@@ -236,9 +454,7 @@ export class ApiClient {
         const limit = query.limit || 20;
         query.offset = (query.page - 1) * limit;
       }
-      const res = await fetch(this.buildUrl('/v1/listings', query), {
-        headers: await this.getHeaders(),
-      });
+      const res = await this.fetchWithAuth(this.buildUrl('/v1/listings', query));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const results = Array.isArray(data) ? data : data.results || [];
@@ -256,9 +472,7 @@ export class ApiClient {
     const paths = [`/v1/listings/${id}`, `/v1/listing/${id}`];
     for (const path of paths) {
       try {
-        const res = await fetch(this.buildUrl(path), {
-          headers: await this.getHeaders(),
-        });
+        const res = await this.fetchWithAuth(this.buildUrl(path));
         if (res.ok) return await res.json();
       } catch (e) {
         // continue
@@ -271,9 +485,7 @@ export class ApiClient {
     const paths = [`/v1/listings/${id}/comparables`, `/v1/listings/comparable/${id}`];
     for (const path of paths) {
       try {
-        const res = await fetch(this.buildUrl(path), {
-          headers: await this.getHeaders(),
-        });
+        const res = await this.fetchWithAuth(this.buildUrl(path));
         if (res.ok) {
           const data = await res.json();
           return Array.isArray(data) ? data : data.results || [];
@@ -292,9 +504,7 @@ export class ApiClient {
         const limit = query.limit || 20;
         query.offset = (query.page - 1) * limit;
       }
-      const res = await fetch(this.buildUrl('/v1/rentals', query), {
-        headers: await this.getHeaders(),
-      });
+      const res = await this.fetchWithAuth(this.buildUrl('/v1/rentals', query));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const results = Array.isArray(data) ? data : data.results || [];
@@ -311,9 +521,7 @@ export class ApiClient {
     const paths = [`/v1/rentals/${id}`, `/v1/rental/${id}`];
     for (const path of paths) {
       try {
-        const res = await fetch(this.buildUrl(path), {
-          headers: await this.getHeaders(),
-        });
+        const res = await this.fetchWithAuth(this.buildUrl(path));
         if (res.ok) return await res.json();
       } catch (e) {
         // continue
@@ -329,9 +537,7 @@ export class ApiClient {
         const limit = query.limit || 20;
         query.offset = (query.page - 1) * limit;
       }
-      const res = await fetch(this.buildUrl('/v1/projects', query), {
-        headers: await this.getHeaders(),
-      });
+      const res = await this.fetchWithAuth(this.buildUrl('/v1/projects', query));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const results = Array.isArray(data) ? data : data.results || [];
@@ -348,9 +554,7 @@ export class ApiClient {
     const paths = [`/v1/projects/${id}`, `/v1/project/${id}`];
     for (const path of paths) {
       try {
-        const res = await fetch(this.buildUrl(path), {
-          headers: await this.getHeaders(),
-        });
+        const res = await this.fetchWithAuth(this.buildUrl(path));
         if (res.ok) return await res.json();
       } catch (e) {
         // continue
@@ -361,9 +565,7 @@ export class ApiClient {
 
   async getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
     try {
-      const res = await fetch(this.buildUrl('/v1/analytics/summary'), {
-        headers: await this.getHeaders(),
-      });
+      const res = await this.fetchWithAuth(this.buildUrl('/v1/analytics/summary'));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (e) {
@@ -373,9 +575,8 @@ export class ApiClient {
 
   async getFavourites(token?: string): Promise<Listing[]> {
     try {
-      const res = await fetch(this.buildUrl('/v1/favourites'), {
-        headers: await this.getHeaders(token),
-      });
+      const headers = await this.getHeaders(token);
+      const res = await fetch(this.buildUrl('/v1/saved'), { headers });
       if (!res.ok) return [];
       const data = await res.json();
       return Array.isArray(data) ? data : data.results || [];
@@ -386,10 +587,11 @@ export class ApiClient {
 
   async addFavourite(listingId: string, token?: string): Promise<boolean> {
     try {
-      const res = await fetch(this.buildUrl('/v1/favourites'), {
+      const headers = await this.getHeaders(token);
+      const res = await fetch(this.buildUrl('/v1/saved'), {
         method: 'POST',
-        headers: await this.getHeaders(token),
-        body: JSON.stringify({ id: listingId, listing_id: listingId }),
+        headers,
+        body: JSON.stringify({ listing_id: listingId }),
       });
       return res.ok;
     } catch (e) {
@@ -398,20 +600,16 @@ export class ApiClient {
   }
 
   async removeFavourite(listingId: string, token?: string): Promise<boolean> {
-    const paths = [`/v1/favourites/${listingId}`, `/v1/favourites`];
-    for (const path of paths) {
-      try {
-        const res = await fetch(this.buildUrl(path), {
-          method: 'DELETE',
-          headers: await this.getHeaders(token),
-          body: path.endsWith('/favourites') ? JSON.stringify({ id: listingId, listing_id: listingId }) : undefined,
-        });
-        if (res.ok) return true;
-      } catch (e) {
-        // continue
-      }
+    try {
+      const headers = await this.getHeaders(token);
+      const res = await fetch(this.buildUrl(`/v1/saved/${listingId}`), {
+        method: 'DELETE',
+        headers,
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 }
 

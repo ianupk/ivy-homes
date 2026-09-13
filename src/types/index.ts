@@ -101,6 +101,9 @@ export interface AnalyticsSummary {
 export interface User {
   email: string;
   name?: string;
+  city?: string;
+  assigned_locality?: string;
+  city_id?: number;
 }
 
 export interface AuthSession {
