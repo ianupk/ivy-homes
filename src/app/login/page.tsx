@@ -4,13 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { KeyRound, Mail, Lock, CheckCircle2, AlertCircle, ArrowRight, UserCheck, Sparkles, MapPin, Heart, Home } from 'lucide-react';
-
-const DEMO_ACCOUNTS = [
-  { label: 'Demo 1', email: 'demo1@ivy.homes' },
-  { label: 'Demo 2', email: 'demo2@ivy.homes' },
-  { label: 'Demo 3', email: 'demo3@ivy.homes' },
-];
+import { KeyRound, Mail, Lock, CheckCircle2, AlertCircle, ArrowRight, MapPin, Heart, Home } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,23 +14,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'c1625cd9e8';
-
-  const handleQuickLogin = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setError(null);
-    setSubmitting(true);
-    try {
-      await login(demoEmail, demoPassword);
-      router.push('/listings');
-    } catch (err: any) {
-      setError(err.message || 'Quick login failed.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +28,7 @@ export default function LoginPage() {
       await login(cleanEmail, password);
       router.push('/listings');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please verify credentials.');
+      setError(err.message || 'Sign in failed. Please verify your credentials.');
     } finally {
       setSubmitting(false);
     }
@@ -65,9 +42,9 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-sm">
             <KeyRound className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Account Login</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Sign In</h1>
           <p className="text-xs text-slate-500">
-            Sign in to access your verified properties, saved collections, and personalized market insights.
+            Access your verified properties, saved collections, and personalized market insights.
           </p>
         </div>
 
@@ -120,92 +97,59 @@ export default function LoginPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-5">
-            {/* Quick Demo Login Preset */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                <span className="flex items-center space-x-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Quick Demo Login</span>
-                </span>
-                <span className="text-[11px] text-slate-400">One-click sign in</span>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    disabled={submitting}
-                    onClick={() => handleQuickLogin(acc.email)}
-                    className="py-1.5 px-2 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:text-emerald-700 transition shadow-2xs disabled:opacity-50"
-                  >
-                    {acc.label}
-                  </button>
-                ))}
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email Address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
               </div>
             </div>
 
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-slate-200 w-full" />
-              <span className="bg-white px-3 text-[11px] text-slate-400 font-medium uppercase tracking-wider absolute">
-                Or enter credentials
-              </span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
+            >
+              {submitting ? (
+                <span>Signing In...</span>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email Address</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    placeholder="demo1@ivy.homes"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="password"
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {submitting ? (
-                  <span>Authenticating...</span>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+            </button>
+          </form>
         )}
       </div>
     </div>
