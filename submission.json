@@ -2,9 +2,9 @@
   "api_key": "IVY26-27475839542B",
   "candidate": {
     "name": "Anup Kumar",
-    "email": "candidate@example.com",
-    "repo_url": "https://github.com/anupkumar/ivy-assignment",
-    "demo_url": "https://ivy-homes.vercel.app"
+    "email": "anup.20233071@mnnit.ac.in",
+    "repo_url": "https://github.com/ianupk/ivy-homes",
+    "demo_url": "https://ivy-homes-pi.vercel.app/"
   },
   "answers": {
     "total_listing_records": 4400,
